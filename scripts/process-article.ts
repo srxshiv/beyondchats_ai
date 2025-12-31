@@ -20,7 +20,7 @@ if (!GEMINI_API_KEY || !SERPAPI_KEY || !MONGODB_URI) {
 
 // Initialize Gemini
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
 
 // --- HELPER 1: Google Search via SerpApi ---
 async function searchGoogle(query: string) {
