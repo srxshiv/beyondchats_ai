@@ -1,12 +1,11 @@
 "use client";
 import { useEffect, useState } from 'react';
 
-// Define the shape of the data based on our Mongoose Schema
 interface Article {
   _id: string;
   title: string;
-  content: string;         // This is the AI Written version
-  originalContent: string; // This is the Original Scraped version
+  content: string;
+  originalContent: string;
   url: string;
   isUpdated: boolean;
   references: Array<{ title: string; link: string }>;
@@ -16,9 +15,8 @@ export default function Home() {
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
-  const [showOriginal, setShowOriginal] = useState(false);
+  const [viewMode, setViewMode] = useState<'original' | 'ai'>('ai');
 
-  // Fetch data on load
   useEffect(() => {
     async function fetchArticles() {
       try {
@@ -26,11 +24,10 @@ export default function Home() {
         const data = await res.json();
         if (data.success) {
           setArticles(data.data);
-          // Auto-select the first article if available
           if (data.data.length > 0) setSelectedArticle(data.data[0]);
         }
       } catch (error) {
-        console.error("Failed to fetch articles", error);
+        console.error("Failed to fetch", error);
       } finally {
         setLoading(false);
       }
@@ -38,144 +35,89 @@ export default function Home() {
     fetchArticles();
   }, []);
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center text-lg">Loading Articles...</div>;
+  if (loading) return <div className="p-8 font-mono text-sm">Loading...</div>;
 
   return (
-    <main className="min-h-screen bg-slate-50 text-slate-900 font-sans">
-      {/* Header */}
-      <header className="bg-white border-b sticky top-0 z-10 px-8 py-4 flex items-center justify-between">
-        <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-          BeyondChats <span className="font-light text-slate-500">Re-Writer</span>
-        </h1>
-        <div className="text-sm text-slate-500">
-          {articles.length} Articles Loaded
+    <main className="min-h-screen flex flex-col md:flex-row font-sans bg-white text-black">
+      <aside className="w-full md:w-80 border-r border-gray-200 h-screen overflow-y-auto flex-shrink-0">
+        <div className="p-4 border-b border-gray-200 bg-gray-50 sticky top-0">
+          <h1 className="font-bold text-sm tracking-wide uppercase">BeyondChats Reader</h1>
         </div>
-      </header>
+        <div>
+          {articles.map((article) => (
+            <div 
+              key={article._id}
+              onClick={() => { 
+                setSelectedArticle(article); 
+                setViewMode('ai'); 
+              }}
+              className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors
+                ${selectedArticle?._id === article._id ? 'bg-black text-white hover:bg-black' : ''}`}
+            >
+              <h3 className="text-sm font-medium leading-snug">{article.title}</h3>
+              <div className="mt-2 text-xs opacity-60">
+                {article.isUpdated ? '✓ AI Updated' : '• Pending'}
+              </div>
+            </div>
+          ))}
+        </div>
+      </aside>
 
-      <div className="flex h-[calc(100vh-65px)]">
-        
-        {/* LEFT SIDEBAR: Article List */}
-        <aside className="w-1/3 max-w-sm border-r bg-white overflow-y-auto">
-          <div className="p-4 space-y-3">
-            {articles.map((article) => (
-              <div 
-                key={article._id}
-                onClick={() => { 
-                  setSelectedArticle(article); 
-                  setShowOriginal(false); // Reset to AI view when switching
-                }}
-                className={`p-4 rounded-lg cursor-pointer transition-all duration-200 border
-                  ${selectedArticle?._id === article._id 
-                    ? 'bg-blue-50 border-blue-200 shadow-sm ring-1 ring-blue-200' 
-                    : 'bg-white border-slate-100 hover:border-slate-300 hover:shadow-sm'
-                  }`}
+      <section className="flex-1 h-screen overflow-y-auto">
+        {selectedArticle ? (
+          <div className="max-w-3xl mx-auto p-8 md:p-16">
+            <div className="mb-8 pb-4 border-b border-black">
+              <a href={selectedArticle.url} target="_blank" className="text-xs text-gray-500 hover:underline mb-2 block">
+                Original Source ↗
+              </a>
+              <h1 className="text-3xl md:text-4xl font-bold leading-tight">{selectedArticle.title}</h1>
+            </div>
+
+            <div className="flex gap-6 mb-8 text-sm font-medium border-b border-gray-100 pb-2">
+              <button 
+                onClick={() => setViewMode('ai')}
+                className={`${viewMode === 'ai' ? 'text-black underline underline-offset-4' : 'text-gray-400 hover:text-black'}`}
               >
-                <h3 className="font-semibold text-slate-800 mb-2 line-clamp-2 leading-tight">
-                  {article.title}
-                </h3>
-                <div className="flex items-center justify-between mt-2">
-                  <span className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full ${
-                    article.isUpdated 
-                    ? 'bg-emerald-100 text-emerald-700' 
-                    : 'bg-amber-100 text-amber-700'
-                  }`}>
-                    {article.isUpdated ? "AI Enhanced" : "Original Only"}
-                  </span>
-                  <span className="text-xs text-slate-400">
-                    {/* Just a placeholder date logic */}
-                    {new Date().toLocaleDateString()}
-                  </span>
-                </div>
+                AI Rewrite
+              </button>
+              <button 
+                onClick={() => setViewMode('original')}
+                className={`${viewMode === 'original' ? 'text-black underline underline-offset-4' : 'text-gray-400 hover:text-black'}`}
+              >
+                Original Text
+              </button>
+            </div>
+
+            <article className="prose prose-neutral max-w-none">
+              <div className="whitespace-pre-line text-lg leading-8 text-gray-800">
+                {viewMode === 'original' 
+                  ? (selectedArticle.originalContent || "No original content available.") 
+                  : (selectedArticle.content)
+                }
               </div>
-            ))}
+            </article>
+
+            {viewMode === 'ai' && selectedArticle.references && selectedArticle.references.length > 0 && (
+              <div className="mt-16 pt-8 border-t border-gray-200">
+                <h4 className="text-xs font-bold uppercase text-gray-400 mb-4 tracking-wider">References</h4>
+                <ul className="space-y-2">
+                  {selectedArticle.references.map((ref, i) => (
+                    <li key={i}>
+                      <a href={ref.link} target="_blank" className="text-sm text-blue-600 hover:underline block truncate">
+                        [{i + 1}] {ref.title}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
-        </aside>
-
-        {/* RIGHT CONTENT: Article Viewer */}
-        <section className="flex-1 overflow-y-auto bg-slate-50 p-8 md:p-12">
-          {selectedArticle ? (
-            <div className="max-w-3xl mx-auto bg-white rounded-xl shadow-sm border border-slate-200 min-h-[500px]">
-              
-              {/* Toolbar */}
-              <div className="flex items-center justify-between p-6 border-b bg-white rounded-t-xl sticky top-0 z-10">
-                <div className="flex bg-slate-100 p-1 rounded-lg">
-                  <button 
-                    onClick={() => setShowOriginal(true)}
-                    className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${
-                      showOriginal ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-                    }`}
-                  >
-                    Original
-                  </button>
-                  <button 
-                    onClick={() => setShowOriginal(false)}
-                    className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${
-                      !showOriginal ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-                    }`}
-                  >
-                    AI Rewrite ✨
-                  </button>
-                </div>
-                
-                <a 
-                  href={selectedArticle.url} 
-                  target="_blank" 
-                  rel="noreferrer"
-                  className="text-xs font-medium text-blue-600 hover:underline flex items-center gap-1"
-                >
-                  Visit Source ↗
-                </a>
-              </div>
-
-              {/* Content Body */}
-              <div className="p-8 md:p-10">
-                <h1 className="text-3xl font-bold text-slate-900 mb-6 leading-tight">
-                  {selectedArticle.title}
-                </h1>
-                
-                <div className="prose prose-slate max-w-none">
-                  {/* We use whitespace-pre-line to preserve paragraphs from the text block */}
-                  <div className="whitespace-pre-line text-lg leading-relaxed text-slate-700">
-                    {showOriginal 
-                      ? (selectedArticle.originalContent || "No original content found.") 
-                      : (selectedArticle.content)
-                    }
-                  </div>
-                </div>
-
-                {/* References Footer (Only on AI View) */}
-                {!showOriginal && selectedArticle.references && selectedArticle.references.length > 0 && (
-                  <div className="mt-12 pt-8 border-t border-slate-100">
-                    <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4">
-                      Sources Used by AI
-                    </h4>
-                    <ul className="space-y-2">
-                      {selectedArticle.references.map((ref, idx) => (
-                        <li key={idx} className="flex items-start gap-2 text-sm">
-                          <span className="text-slate-300">•</span>
-                          <a 
-                            href={ref.link} 
-                            target="_blank" 
-                            className="text-blue-600 hover:underline truncate max-w-md block"
-                          >
-                            {ref.title}
-                          </a>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-
-            </div>
-          ) : (
-            <div className="h-full flex flex-col items-center justify-center text-slate-400">
-              <p>Select an article from the sidebar</p>
-            </div>
-          )}
-        </section>
-
-      </div>
+        ) : (
+          <div className="h-full flex items-center justify-center text-sm text-gray-400">
+            Select an article to begin reading.
+          </div>
+        )}
+      </section>
     </main>
   );
 }

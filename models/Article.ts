@@ -12,10 +12,10 @@ export interface IArticle extends Document {
 
 const ArticleSchema: Schema = new Schema({
   title: { type: String, required: true },
-  url: { type: String, required: true, unique: true }, // URL must be unique
+  url: { type: String, required: true, unique: true }, 
   content: { type: String, required: true },
   date: { type: String },
-  originalContent: { type: String }, // Backup of original text
+  originalContent: { type: String },
   isUpdated: { type: Boolean, default: false },
   references: [{ title: String, link: String }]
 });

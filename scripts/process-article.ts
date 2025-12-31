@@ -3,13 +3,12 @@ import dotenv from 'dotenv';
 import axios from 'axios';
 import { JSDOM } from 'jsdom';
 import { Readability } from '@mozilla/readability';
-import { GoogleGenerativeAI } from '@google/generative-ai'; // <--- CHANGED
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import Article from '../models/Article';
 
 dotenv.config();
 
-// Configuration
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY; // <--- CHANGED
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const SERPAPI_KEY = process.env.SERPAPI_KEY;
 const MONGODB_URI = process.env.MONGODB_URI || '';
 
@@ -18,11 +17,9 @@ if (!GEMINI_API_KEY || !SERPAPI_KEY || !MONGODB_URI) {
   process.exit(1);
 }
 
-// Initialize Gemini
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
 
-// --- HELPER 1: Google Search via SerpApi ---
 async function searchGoogle(query: string) {
   console.log(`🔎 Searching Google for: "${query}"...`);
   const url = `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&api_key=${SERPAPI_KEY}&num=5`;
@@ -31,7 +28,6 @@ async function searchGoogle(query: string) {
     const response = await axios.get(url);
     const results = response.data.organic_results || [];
     
-    // Filter out PDF/YouTube
     const validLinks = results
       .filter((r: any) => !r.link.includes('youtube.com') && !r.link.includes('.pdf'))
       .slice(0, 2); 
@@ -43,17 +39,14 @@ async function searchGoogle(query: string) {
   }
 }
 
-// --- HELPER 2: Scrape Content ---
 async function fetchPageContent(url: string) {
   try {
     const { data } = await axios.get(url, { 
       headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' } 
     });
     
-    // Note: The "CSS stylesheet" warning you saw comes from here (JSDOM). 
-    // It is harmless, so we hide console.error temporarily.
     const virtualConsole = new JSDOM(data).virtualConsole;
-    virtualConsole.on("error", () => { /* Suppress CSS errors */ });
+    virtualConsole.on("error", () => { });
 
     const dom = new JSDOM(data, { url, virtualConsole });
     const reader = new Readability(dom.window.document);
@@ -66,7 +59,6 @@ async function fetchPageContent(url: string) {
   }
 }
 
-// --- MAIN SCRIPT ---
 const runPhase2 = async () => {
   try {
     await mongoose.connect(MONGODB_URI);
@@ -78,7 +70,6 @@ const runPhase2 = async () => {
     for (const article of articlesToProcess) {
       console.log(`\n⚙️ Processing: ${article.title}`);
 
-      // 1. Search Google
       const references = await searchGoogle(article.title);
       
       if (references.length === 0) {
@@ -86,7 +77,6 @@ const runPhase2 = async () => {
         continue;
       }
 
-      // 2. Scrape References
       let contextData = "";
       for (const ref of references) {
         console.log(`   Reading: ${ref.title}`);
@@ -101,7 +91,6 @@ const runPhase2 = async () => {
           continue;
       }
 
-      // 3. Generate New Content with Gemini
       console.log("   🧠 Sending to Gemini AI...");
       const prompt = `
         You are an expert editor. 
@@ -120,7 +109,6 @@ const runPhase2 = async () => {
       const response = await result.response;
       const newContent = response.text();
 
-      // 4. Update Database
       if (newContent) {
           article.content = newContent; 
           article.isUpdated = true;
