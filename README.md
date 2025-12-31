@@ -1,36 +1,66 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# BeyondChats Article Re-Writer
 
-## Getting Started
+A full-stack application that scrapes blog articles, enriches them with new data from Google Search, rewrites them using Google Gemini AI, and displays a comparison view (Original vs. AI Enhanced) on a Next.js frontend.
 
-First, run the development server:
+## 🔗 Live Demo
+**[Insert your Vercel Link Here]**
 
-```bash
+---
+
+1. Clone the repo
+
+Bash
+git clone <your-repo-url>
+cd beyondchats-scraper
+2. Install dependencies
+
+Bash
+npm install
+3. Configure Environment Variables
+
+Create a .env.local file in the root directory. You need keys for MongoDB, Google Gemini, and SerpApi.
+
+Code snippet
+MONGODB_URI=mongodb+srv://<user>:<pass>@cluster.mongodb.net/beyondchats
+GEMINI_API_KEY=AIzaSy...
+SERPAPI_KEY=...
+4. Run the Pipeline
+
+Step A: Scrape the original articles (Phase 1) This script launches Puppeteer, grabs the last 5 articles from the blog, and seeds the database.
+
+Bash
+npx tsx scripts/scrape.ts
+Step B: AI Rewrite & Enrichment (Phase 2) This script reads from the DB, searches Google for context, rewrites the content, and updates the records.
+
+Bash
+npx tsx scripts/process-articles.ts
+Step C: Start the Frontend (Phase 3) Launches the Next.js application.
+
+Bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+Open http://localhost:3000 to view the application.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🏗 Architecture & Data Flow
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```mermaid
+graph TD
+    subgraph "Phase 1: Ingestion"
+        S[Scrape Script] -->|Puppeteer| W[BeyondChats Blog]
+        S -->|Save Raw Data| DB[(MongoDB)]
+    end
 
-## Learn More
+    subgraph "Phase 2: Processing"
+        AI[AI Worker Script] -->|Fetch Pending| DB
+        AI -->|Search Context| G[Google Search API]
+        AI -->|Scrape References| EXT[External Blogs]
+        AI -->|Rewrite Content| LLM[Gemini Flash API]
+        LLM -->|Return New Text| AI
+        AI -->|Update Article| DB
+    end
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+    subgraph "Phase 3: Presentation"
+        UI[Next.js Frontend] -->|GET /api/articles| DB
+        User -->|View Toggle| UI
+    end

@@ -52,7 +52,7 @@ async function fetchPageContent(url: string) {
     const reader = new Readability(dom.window.document);
     const article = reader.parse();
     
-    return article ? article.textContent.slice(0, 2000) : null; 
+    return article?.textContent?.slice(0, 2000) ?? null; 
   } catch (error) {
     console.warn(`⚠️ Could not scrape reference: ${url}`);
     return null;
